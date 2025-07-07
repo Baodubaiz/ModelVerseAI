@@ -1,0 +1,145 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  user
+  dev
+  admin
+}
+
+enum PaymentMethod {
+  VND
+  ETH
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+}
+
+enum ConfirmStatus {
+  waiting
+  confirmed
+  rejected
+}
+
+model User {
+  user_id        String   @id @default(uuid())
+  wallet_address String?  @unique
+  email          String?  @unique
+  password       String?  // chỉ dùng nếu đăng nhập bằng email
+  full_name      String?
+  phone_number   String?
+
+  bank_account   String?  // optional → chỉ cần nếu là dev
+  bank_name      String?
+
+  role           Role     // enum: buyer, dev, admin
+  models                  AI_Model[]
+  transactions_vnd        Transaction_VND[]        @relation("BuyerTransactionsVND")
+  transactions_blockchain Transaction_Blockchain[] @relation("BuyerTransactionsBlockchain")
+  confirmations           Order_Confirmation[]     @relation("DevConfirmations")
+  reviews                 Review[]
+  demos                   Demo_Usage[]
+}
+
+model AI_Category {
+  category_id String              @id @default(uuid())
+  name        String              @unique
+  models      AI_Model_Category[]
+}
+
+model AI_Model {
+  model_id                String                   @id @default(uuid())
+  user_id                 String
+  name                    String
+  description             String
+  file_path               String
+  price_vnd               Decimal
+  price_eth               Decimal
+  input_type              String
+  output_type             String
+  created_at              DateTime                 @default(now())
+  user                    User                     @relation(fields: [user_id], references: [user_id])
+  categories              AI_Model_Category[]
+  transactions_vnd        Transaction_VND[]
+  transactions_blockchain Transaction_Blockchain[]
+  reviews                 Review[]
+  demos                   Demo_Usage[]
+}
+
+model AI_Model_Category {
+  model_id    String
+  category_id String
+  model       AI_Model    @relation(fields: [model_id], references: [model_id])
+  category    AI_Category @relation(fields: [category_id], references: [category_id])
+
+  @@id([model_id, category_id])
+}
+
+model Transaction_VND {
+  id          String        @id @default(uuid())
+  buyer_id    String
+  model_id    String
+  amount_vnd  Decimal
+  proof_image String?
+  status      PaymentStatus
+  created_at  DateTime      @default(now())
+
+  buyer        User                @relation("BuyerTransactionsVND", fields: [buyer_id], references: [user_id])
+  model        AI_Model            @relation(fields: [model_id], references: [model_id])
+  confirmation Order_Confirmation?
+}
+
+model Transaction_Blockchain {
+  id               String        @id @default(uuid())
+  buyer_id         String
+  model_id         String
+  amount_eth       Decimal
+  transaction_hash String
+  status           PaymentStatus
+  created_at       DateTime      @default(now())
+
+  buyer User     @relation("BuyerTransactionsBlockchain", fields: [buyer_id], references: [user_id])
+  model AI_Model @relation(fields: [model_id], references: [model_id])
+}
+
+model Order_Confirmation {
+  confirm_id     String        @id @default(uuid())
+  transaction_id String        @unique
+  dev_id         String
+  confirmed_at   DateTime      @default(now())
+  status         ConfirmStatus
+
+  transaction Transaction_VND @relation(fields: [transaction_id], references: [id])
+  dev         User            @relation("DevConfirmations", fields: [dev_id], references: [user_id])
+}
+
+model Review {
+  review_id  String   @id @default(uuid())
+  model_id   String
+  user_id    String
+  rating     Int
+  comment    String
+  created_at DateTime @default(now())
+  model      AI_Model @relation(fields: [model_id], references: [model_id])
+  user       User     @relation(fields: [user_id], references: [user_id])
+}
+
+model Demo_Usage {
+  demo_id     String   @id @default(uuid())
+  model_id    String
+  user_id     String
+  input_file  String
+  output_file String
+  created_at  DateTime @default(now())
+  model       AI_Model @relation(fields: [model_id], references: [model_id])
+  user        User     @relation(fields: [user_id], references: [user_id])
+}
