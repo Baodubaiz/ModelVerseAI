@@ -1,8 +1,11 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { verifyToken, AuthRequest } from '../middleware/VerifyToken'
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+
 
 // Get all AI Models
 router.get('/', async (req, res) => {
@@ -49,8 +52,20 @@ router.get('/:id', async (req, res) => {
 
 
 // Create AI Model
-router.post('/', async (req, res) => {
-    const { user_id, name, description, file_path, price_vnd, price_eth, input_type, output_type, categoryIds } = req.body;
+// POST /ai-model (Tạo AI Model mới, cần đăng nhập)
+router.post('/', verifyToken, async (req: AuthRequest, res) => {
+    const {
+        name,
+        description,
+        file_path,
+        price_vnd,
+        price_eth,
+        input_type,
+        output_type,
+        categoryIds
+    } = req.body;
+
+    const user_id = req.user.user_id;
 
     try {
         const newModel = await prisma.aI_Model.create({
@@ -73,7 +88,7 @@ router.post('/', async (req, res) => {
             },
             include: {
                 categories: {
-                    include: { category: true } // trả về luôn chi tiết category
+                    include: { category: true }
                 }
             }
         });
@@ -84,6 +99,7 @@ router.post('/', async (req, res) => {
         res.status(400).json({ error: err.message });
     }
 });
+
 
 
 
