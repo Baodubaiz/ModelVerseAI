@@ -9,11 +9,16 @@ import transactionBlockchainRoutes from './routes/Transaction_Blockchain.route';
 import categoryRouter from './routes/Category.route';
 import loginRouter from './routes/Login.route';
 import registerRoute from './routes/Register.route'
+import cors from 'cors';
 
 
 
 const app = express();
 const port = 3001;
+app.use(cors({
+    origin: 'http://localhost:3000', // 👈 Cho phép frontend truy cập
+    credentials: true,               // 👈 Nếu bạn dùng cookie thì bật cái này
+}));
 
 app.use(express.json());
 app.use('/api/users', userRouter);

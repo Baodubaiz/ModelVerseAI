@@ -25,6 +25,38 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET /api/models/user/:userId
+router.get('/user/:userId', verifyToken, async (req: AuthRequest, res) => {
+    if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized: Please login first' });
+        return;
+    }
+    try {
+
+        const { userId } = req.params;
+
+        const models = await prisma.aI_Model.findMany({
+            where: {
+                user_id: userId,
+                is_active: true, // 👈 tuỳ chọn: chỉ hiện model đã active / đang bán
+            },
+            include: {
+                categories: {
+                    include: { category: true }
+                },
+                user: true // tuỳ chọn: hiển thị thông tin chủ sở hữu
+            }
+        });
+
+        res.json(models);
+    } catch (error) {
+        const err = error as Error;
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
 // Get AI Model by ID
 router.get('/:id', async (req, res) => {
     try {
@@ -51,6 +83,7 @@ router.get('/:id', async (req, res) => {
 });
 
 
+
 // Create AI Model
 // POST /ai-model (Tạo AI Model mới, cần đăng nhập)
 router.post('/', verifyToken, async (req: AuthRequest, res) => {
@@ -62,10 +95,21 @@ router.post('/', verifyToken, async (req: AuthRequest, res) => {
         price_eth,
         input_type,
         output_type,
-        categoryIds
+        categoryIds,
+        thumbnail_url,
+        is_active = true,
+        demo_available = false,
+        tags = []
     } = req.body;
 
-    const user_id = req.user.user_id;
+
+    const { user_id, role } = req.user!; // <- dấu ! khẳng định không undefined
+
+    if (role !== 'dev' && role !== 'admin') {
+        res.status(403).json({ error: 'Access denied: Devs only' });
+        return;
+    }
+
 
     try {
         const newModel = await prisma.aI_Model.create({
@@ -78,14 +122,17 @@ router.post('/', verifyToken, async (req: AuthRequest, res) => {
                 price_eth,
                 input_type,
                 output_type,
+                thumbnail_url,
+                is_active,
+                demo_available,
+                tags,
                 categories: {
                     create: categoryIds.map((category_id: string) => ({
-                        category: {
-                            connect: { category_id }
-                        }
+                        category: { connect: { category_id } }
                     }))
                 }
             },
+
             include: {
                 categories: {
                     include: { category: true }
@@ -102,10 +149,39 @@ router.post('/', verifyToken, async (req: AuthRequest, res) => {
 
 
 
-
 // Update AI Model
-router.put('/:id', async (req, res) => {
-    const { name, description, file_path, price_vnd, price_eth, input_type, output_type, categoryIds } = req.body;
+router.put('/:id', verifyToken, async (req: AuthRequest, res) => {
+    const {
+        name,
+        description,
+        file_path,
+        price_vnd,
+        price_eth,
+        input_type,
+        output_type,
+        categoryIds,
+        thumbnail_url,
+        is_active,
+        demo_available,
+        tags
+    } = req.body;
+
+    // Chỉ cho phép DEV hoặc ADMIN sửa
+    const { user_id, role } = req.user!; // <- dấu ! khẳng định không undefined
+
+    const model = await prisma.aI_Model.findUnique({
+        where: { model_id: req.params.id }
+    });
+
+    if (!model) {
+        res.status(404).json({ error: 'Model not found' });
+        return;
+    }
+
+    if (role !== 'admin' && (role !== 'dev' || model.user_id !== user_id)) {
+        res.status(403).json({ error: 'Access denied' });
+        return;
+    }
 
     try {
         const updatedModel = await prisma.aI_Model.update({
@@ -118,21 +194,24 @@ router.put('/:id', async (req, res) => {
                 price_eth,
                 input_type,
                 output_type,
-                categories: {
-                    deleteMany: {}, // ❗ Xóa hết liên kết cũ
-                    create: categoryIds.map((category_id: string) => ({ // ❗ Thêm mới
-                        category: {
-                            connect: { category_id } // Kết nối đến category mới
-                        }
-                    }))
-                }
+                thumbnail_url,
+                is_active,
+                demo_available,
+                tags,
+                categories: categoryIds
+                    ? {
+                        deleteMany: {},
+                        create: categoryIds.map((category_id: string) => ({
+                            category: { connect: { category_id } }
+                        }))
+                    }
+                    : undefined
             },
             include: {
-                categories: {
-                    include: { category: true } // Trả chi tiết category
-                }
+                categories: { include: { category: true } }
             }
         });
+
 
         res.json(updatedModel);
     } catch (error) {
@@ -142,10 +221,27 @@ router.put('/:id', async (req, res) => {
 });
 
 
+
+
 // Delete AI Model
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, async (req: AuthRequest, res) => {
+    // Chỉ cho phép DEV hoặc ADMIN sửa
+    const { user_id: user_id, role } = req.user!;
+
+    const model = await prisma.aI_Model.findUnique({
+        where: { model_id: req.params.id }
+    });
+
+    if (!model) {
+        res.status(404).json({ error: 'Model not found' });
+        return;
+    }
+    if (role !== 'admin' && (role !== 'dev' || model.user_id !== user_id)) {
+        res.status(403).json({ error: 'Access denied' });
+        return;
+    }
+
     try {
-        // Check nếu model tồn tại
         const model = await prisma.aI_Model.findUnique({
             where: { model_id: req.params.id }
         });
@@ -155,12 +251,12 @@ router.delete('/:id', async (req, res) => {
             return;
         }
 
-        // Xóa bản ghi liên quan ở bảng pivot trước (nếu có)
+        // Xóa category liên quan
         await prisma.aI_Model_Category.deleteMany({
             where: { model_id: req.params.id }
         });
 
-        // Xóa AI_Model
+        // Xóa model
         await prisma.aI_Model.delete({
             where: { model_id: req.params.id }
         });
@@ -171,6 +267,7 @@ router.delete('/:id', async (req, res) => {
         res.status(400).json({ error: err.message });
     }
 });
+
 
 
 

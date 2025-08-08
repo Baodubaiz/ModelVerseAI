@@ -1,11 +1,16 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { verifyToken, AuthRequest } from '../middleware/VerifyToken';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get all Blockchain transactions
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req: AuthRequest, res) => {
+    if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized: Please log in first' });
+        return;
+    }
     try {
         const transactions = await prisma.transaction_Blockchain.findMany({
             include: {
@@ -20,7 +25,11 @@ router.get('/', async (req, res) => {
 });
 
 // Get Blockchain transaction by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', verifyToken, async (req: AuthRequest, res) => {
+    if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized: Please log in first' });
+        return;
+    }
     try {
         const transaction = await prisma.transaction_Blockchain.findUnique({
             where: { id: req.params.id },
@@ -42,7 +51,11 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create Blockchain transaction
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req: AuthRequest, res) => {
+    if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized: Please log in first' });
+        return;
+    }
     const { buyer_id, model_id, amount_eth, transaction_hash, status } = req.body;
 
     if (!buyer_id || !model_id || !amount_eth || !transaction_hash || !status) {

@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { verifyToken, AuthRequest } from '../middleware/VerifyToken';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -23,21 +24,36 @@ router.get('/', async (req, res) => {
 });
 
 // GET user by ID (ẩn password)
-router.get('/:id', async (req, res) => {
-    const user = await prisma.user.findUnique({
-        where: { user_id: req.params.id },
-        select: {
-            user_id: true,
-            wallet_address: true,
-            email: true,
-            phone_number: true,
-            bank_account: true,
-            bank_name: true,
-            role: true,
-            full_name: true,
+router.get('/:id', verifyToken, async (req: AuthRequest, res) => {
+    try {
+        if (!req.user) {
+            res.status(401).json({ error: 'Unauthorized: Please log in first' });
+            return;
         }
-    });
-    res.json(user);
+
+        const user = await prisma.user.findUnique({
+            where: { user_id: req.params.id },
+            select: {
+                user_id: true,
+                wallet_address: true,
+                email: true,
+                phone_number: true,
+                bank_account: true,
+                bank_name: true,
+                role: true,
+                full_name: true,
+            }
+        });
+
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 
 // POST create user (có thể có password, sẽ hash nếu có)
@@ -70,9 +86,12 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update user (nếu có password mới thì hash)
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, async (req: AuthRequest, res) => {
     const { wallet_address, email, password, phone_number, bank_account, bank_name, role, full_name } = req.body;
-
+    if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized: Please log in first' });
+        return;
+    }
     try {
         const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
 

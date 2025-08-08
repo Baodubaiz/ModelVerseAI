@@ -1,5 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { verifyToken, AuthRequest } from '../middleware/VerifyToken';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -19,7 +20,12 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create Review (Chỉ cho phép nếu user đã mua model qua VND hoặc Blockchain)
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req: AuthRequest, res) => {
+    const { role } = req.user!;
+    if (!req.user && role !== 'user') {
+        res.status(401).json({ error: 'Unauthorized: Please login first' });
+        return;
+    }
     const { user_id, model_id, rating, comment } = req.body;
 
     try {
@@ -60,7 +66,12 @@ router.post('/', async (req, res) => {
 
 
 // Update review
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, async (req: AuthRequest, res) => {
+    const { user_id } = req.user!;
+    if (user_id !== req.user?.user_id) {
+        res.status(401).json({ error: 'you are not authorized to update this review' });
+        return;
+    }
     const { rating, comment } = req.body;
     const updated = await prisma.review.update({
         where: { review_id: req.params.id },
@@ -70,7 +81,12 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete review
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, async (req: AuthRequest, res) => {
+    const { user_id } = req.user!;
+    if (user_id !== req.user?.user_id) {
+        res.status(401).json({ error: 'you are not authorized to delete this review' });
+        return;
+    }
     try {
         await prisma.review.delete({
             where: { review_id: req.params.id }

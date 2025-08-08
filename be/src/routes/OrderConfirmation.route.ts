@@ -1,17 +1,17 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { verifyToken, AuthRequest } from '../middleware/VerifyToken';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Create confirmation
-router.post('/', async (req, res) => {
-    const { transaction_id, dev_id, status } = req.body;
-
-    if (!transaction_id || !dev_id || !status) {
-        res.status(400).json({ error: 'Missing required fields' });
+router.post('/', verifyToken, async (req: AuthRequest, res) => {
+    if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized: Please login first' });
         return;
     }
+    const { transaction_id, dev_id, status } = req.body;
 
     try {
         const newConfirm = await prisma.order_Confirmation.create({

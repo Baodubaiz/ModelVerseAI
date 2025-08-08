@@ -29,6 +29,22 @@ router.post('/', async (req, res) => {
             }
         }
 
+        if (phone_number) {
+            const existingPhone = await prisma.user.findUnique({ where: { phone_number } })
+            if (existingPhone) {
+                res.status(400).json({ error: 'Số điện thoại đã tồn tại' })
+                return;
+            }
+        }
+
+        if (bank_account) {
+            const existingBankAccount = await prisma.user.findUnique({ where: { bank_account } })
+            if (existingBankAccount) {
+                res.status(400).json({ error: 'Tài khoản ngân hàng đã tồn tại' })
+                return;
+            }
+        }
+
         if (wallet_address) {
             const existingWallet = await prisma.user.findUnique({ where: { wallet_address } })
             if (existingWallet) {

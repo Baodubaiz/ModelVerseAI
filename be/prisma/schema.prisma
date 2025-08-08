@@ -36,9 +36,9 @@ model User {
   email          String?  @unique
   password       String?  // chỉ dùng nếu đăng nhập bằng email
   full_name      String?
-  phone_number   String?
+  phone_number   String?  @unique
 
-  bank_account   String?  // optional → chỉ cần nếu là dev
+  bank_account   String?  @unique // optional → chỉ cần nếu là dev
   bank_name      String?
 
   role           Role     // enum: buyer, dev, admin
@@ -62,11 +62,18 @@ model AI_Model {
   name                    String
   description             String
   file_path               String
+  thumbnail_url           String?                  // Mới: ảnh preview
   price_vnd               Decimal
   price_eth               Decimal
   input_type              String
   output_type             String
   created_at              DateTime                 @default(now())
+  updated_at              DateTime                 @updatedAt     @default(now())   // Mới
+  is_active               Boolean                  @default(true)    // Mới
+  demo_available          Boolean                  @default(false)   // Mới
+  tags                    String[]                 // Mới
+
+  // Quan hệ
   user                    User                     @relation(fields: [user_id], references: [user_id])
   categories              AI_Model_Category[]
   transactions_vnd        Transaction_VND[]
@@ -74,6 +81,7 @@ model AI_Model {
   reviews                 Review[]
   demos                   Demo_Usage[]
 }
+
 
 model AI_Model_Category {
   model_id    String
