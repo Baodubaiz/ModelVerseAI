@@ -16,6 +16,8 @@ export interface AuthRequest extends Request {
 }
 
 export function verifyToken(req: AuthRequest, res: Response, next: NextFunction): void {
+    console.log('Auth header:', req.headers['authorization']);
+
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

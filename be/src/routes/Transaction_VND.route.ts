@@ -69,13 +69,12 @@ router.put('/:id', verifyToken, async (req: AuthRequest, res) => {
 
 // Delete VND transaction
 router.delete('/:id', verifyToken, async (req: AuthRequest, res) => {
-    console.log('Delete VND transaction');
-    const transactionId = req.params.id;
     const { user_id, role } = req.user!;
     if (req.user?.role !== 'admin') {
         res.status(401).json({ error: 'access denied' });
         return;
     }
+    const transactionId = req.params.id;
     try {
         // Xóa Order_Confirmation nếu có
         await prisma.order_Confirmation.deleteMany({
