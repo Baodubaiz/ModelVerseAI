@@ -27,8 +27,8 @@ app.use('/api/reviews', reviewRouter);
 app.use('/api/demos', demoUsageRouter);
 app.use('/api/confirmations', orderConfirmationRouter);
 app.use('/api/categories', categoryRouter);
-app.use('/api/transactions/vnd', transactionVNDRoutes);
-app.use('/api/transactions/blockchain', transactionBlockchainRoutes);
+app.use('/api/transactions_vnd', transactionVNDRoutes);
+app.use('/api/transactions_blockchain', transactionBlockchainRoutes);
 app.use('/api/login', loginRouter);
 app.use('/api/register', registerRoute);
 
