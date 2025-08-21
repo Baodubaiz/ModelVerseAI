@@ -15,6 +15,46 @@ router.get('/', verifyToken, async (req: AuthRequest, res) => {
     res.json(transactions);
 });
 
+
+/**
+ * GET /api/transaction_vnd/user/:userId
+ * Lấy danh sách giao dịch VNĐ của một user
+*/
+router.get("/user/:userId", verifyToken, async (req: AuthRequest, res) => {
+    if (!req.user) {
+        res.status(401).json({ error: "Unauthorized: Please login first" });
+        return;
+    }
+
+    try {
+        const { userId } = req.params;
+
+        // Chỉ cho phép xem nếu là chính user hoặc admin
+        if (req.user.user_id !== userId && req.user.role !== "admin") {
+            res.status(403).json({ error: "Access denied" });
+            return;
+        }
+
+        const transactions = await prisma.transaction_VND.findMany({
+            where: { buyer_id: userId },
+            include: {
+                model: {
+                    include: {
+                        categories: { include: { category: true } },
+                        user: true, // Chủ model
+                    },
+                },
+                confirmation: true, // Xác nhận đơn hàng (nếu có)
+            },
+            orderBy: { created_at: "desc" },
+        });
+
+        res.json(transactions);
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+});
+
 // Get VND transaction by ID
 router.get('/:id', verifyToken, async (req: AuthRequest, res) => {
     if (!req.user) {

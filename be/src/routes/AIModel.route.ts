@@ -55,6 +55,32 @@ router.get('/user/:userId', verifyToken, async (req: AuthRequest, res) => {
     }
 });
 
+/**
+ * GET /api/models/category/:categoryId
+ * Lấy danh sách model thuộc một category
+ */
+router.get("/category/:categoryId", async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+        const models = await prisma.aI_Model.findMany({
+            where: {
+                categories: {
+                    some: {
+                        category_id: categoryId,
+                    },
+                },
+                is_active: true,
+            },
+            include: {
+                categories: { include: { category: true } },
+                user: true,
+            },
+        });
+        res.json(models);
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+});
 
 
 // Get AI Model by ID

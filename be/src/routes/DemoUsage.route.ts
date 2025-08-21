@@ -27,6 +27,44 @@ router.get('/:id', verifyToken, async (req: AuthRequest, res) => {
     res.json(demo);
 });
 
+
+
+/* GET /api/demousage/user/:userId */
+router.get("/user/:userId", verifyToken, async (req: AuthRequest, res) => {
+    if (!req.user) {
+        res.status(401).json({ error: "Unauthorized: Please login first" });
+        return;
+    }
+
+    try {
+        const { userId } = req.params;
+
+        // Nếu muốn giới hạn: chỉ cho user tự xem hoặc admin
+        if (req.user.user_id !== userId && req.user.role !== "admin") {
+            res.status(403).json({ error: "Access denied" });
+            return;
+        }
+
+        const usages = await prisma.demo_Usage.findMany({
+            where: { user_id: userId },
+            include: {
+                model: {
+                    include: {
+                        categories: { include: { category: true } },
+                        user: true,
+                    },
+                },
+            },
+            orderBy: { created_at: "desc" },
+        });
+
+        res.json(usages);
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+});
+
+
 // Create demo
 router.post('/', verifyToken, async (req: AuthRequest, res) => {
     if (!req.user) {

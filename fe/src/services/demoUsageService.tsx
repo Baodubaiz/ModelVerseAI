@@ -8,5 +8,5 @@ export const updateDemoUsage = (id: string, data: Partial<Demo_Usage>) => api.pu
 export const deleteDemoUsage = (id: string) => api.delete(`/demousage/${id}`);
 
 /// Additional demo usage-specific queries
-export const getDemoUsageByModelId = (modelId: string) => api.get<Demo_Usage[]>(`/demousage/model/${modelId}`);
 export const getDemoUsageByUserId = (userId: string) => api.get<Demo_Usage[]>(`/demousage/user/${userId}`);
+// export const getDemoUsageByModelId = (modelId: string) => api.get<Demo_Usage[]>(`/demousage/model/${modelId}`);

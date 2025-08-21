@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import "@/styles/tailwind.css"; // Ensure Tailwind CSS is imported
 
 export function Background() {
   const mountRef = useRef<HTMLDivElement>(null);

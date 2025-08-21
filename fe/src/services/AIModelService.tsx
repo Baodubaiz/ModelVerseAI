@@ -10,4 +10,4 @@ export const deleteModel = (id: string) => api.delete(`/models/${id}`);
 // Additional model-specific queries
 export const getModelByUserId = (userId: string) => api.get<AI_Model[]>(`/models/user/${userId}`);
 export const getModelsByCategoryId = (categoryId: string) => api.get<AI_Model[]>(`/models/category/${categoryId}`);
-export const getModelsByStatus = (status: string) => api.get<AI_Model[]>(`/models/status/${status}`);
+// export const getModelsByStatus = (status: string) => api.get<AI_Model[]>(`/models/status/${status}`);

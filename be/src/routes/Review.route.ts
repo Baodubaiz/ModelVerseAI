@@ -19,6 +19,29 @@ router.get('/:id', async (req, res) => {
     res.json(review);
 });
 
+/**
+ * GET /api/reviews/model/:modelId
+ * Lấy tất cả review của một model
+ */
+router.get("/model/:modelId", async (req, res) => {
+    try {
+        const { modelId } = req.params;
+
+        const reviews = await prisma.review.findMany({
+            where: { model_id: modelId },
+            include: {
+                user: true,  // Lấy thông tin người đánh giá
+            },
+            orderBy: { created_at: "desc" },
+        });
+
+        res.json(reviews);
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+});
+
+
 // Create Review (Chỉ cho phép nếu user đã mua model qua VND hoặc Blockchain)
 router.post('/', verifyToken, async (req: AuthRequest, res) => {
     const { role } = req.user!;

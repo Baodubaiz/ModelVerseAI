@@ -64,4 +64,36 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/order-confirmation/:id
+ * Lấy thông tin xác nhận đơn hàng theo confirm_id
+ */
+router.get("/:id", verifyToken, async (req: AuthRequest, res) => {
+    if (!req.user) {
+        res.status(401).json({ error: "Unauthorized: Please login first" });
+        return;
+    }
+
+    try {
+        const { id } = req.params;
+
+        const confirmation = await prisma.order_Confirmation.findUnique({
+            where: { confirm_id: id },
+            include: {
+                transaction: true, // lấy chi tiết giao dịch VNĐ
+                dev: true,         // lấy thông tin dev xác nhận
+            },
+        });
+
+        if (!confirmation) {
+            res.status(404).json({ error: "Order confirmation not found" });
+            return;
+        }
+
+        res.json(confirmation);
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+});
+
 export default router;
